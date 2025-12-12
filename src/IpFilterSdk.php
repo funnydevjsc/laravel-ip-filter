@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use JetBrains\PhpStorm\Pure;
 use MaxMind\MinFraud;
 
 class IpFilterSdk
@@ -26,7 +25,7 @@ class IpFilterSdk
     private function getConfigValue($value, $configKey) {
         return $value ? $value : Config::get('ip-filter.'.$configKey);
     }
-    
+
     public function fetch_value(string $input = '', string $start = '', string $end = ''): string
     {
         if (! $input) {
@@ -151,7 +150,7 @@ class IpFilterSdk
         ];
     }
 
-    public function validate(string $ip, bool $fast = true, bool $score = false): array
+    public function handle(string $ip, bool $fast = true, bool $score = false): array
     {
         // Force ip lowercase per policy
         $ip = strtolower(trim($ip));
@@ -162,19 +161,6 @@ class IpFilterSdk
             $result['recommend'] = false;
             $result['reason'] = 'Invalid ip format';
             if ($fast) return $result;
-        }
-
-        // Cache for burst protection (fast repeated checks)
-        $cacheKey = 'ip_filter:'.md5(implode('|', [$ip, (int)$fast, (int)$score]));
-        if ($fast) {
-            try {
-                $cached = Cache::get($cacheKey);
-                if (is_array($cached)) {
-                    return $cached;
-                }
-            } catch (Exception) {
-                // Ignore cache errors
-            }
         }
 
         // Perform default information checking from IP-API
@@ -197,35 +183,39 @@ class IpFilterSdk
                 $result['location']['lon'] = $ip_api['lon'];
                 $result['location']['timezone'] = $ip_api['timezone'];
 
-                if ($ip_api['proxy']) {
-                    $result['trustable']['proxy'] = true;
-                }
-                if ($ip_api['hosting']) {
-                    $result['trustable']['hosting'] = true;
-                }
                 if ($ip_api['mobile']) {
                     $result['trustable']['mobile'] = true;
                 }
-            }
-        } catch (Exception) {}
 
-        // Perform quality checking from Maxmind
-        try {
-            $mmAccount = $this->credentials['maxmind']['account'] ?? null;
-            $mmLicense = $this->credentials['maxmind']['license'] ?? null;
-            if ($mmAccount && $mmLicense) {
-                $mindfraud = new MinFraud($mmAccount, $mmLicense);
-                $response = $mindfraud->withDevice([
-                    'ip' => $ip,
-                ])->score();
-
-                $maxmind = $this->convert_array($response);
-
-                if ($maxmind['ip_address']['risk']) {
-                    $result['trustable']['fraud_score'] = max($result['trustable']['fraud_score'], round($maxmind['ip_address']['risk']));
+                if ($ip_api['proxy'] || $ip_api['hosting']) {
+                    $result['trustable']['proxy'] = true;
+                }
+                if ($fast && ($result['trustable']['proxy'])) {
+                    $result['reason'] = 'This ip was marked as proxy';
+                    $result['recommend'] = false;
+                    return $result;
                 }
             }
         } catch (Exception) {}
+
+        if ($score) {// Perform quality checking from Maxmind
+            try {
+                $mmAccount = $this->credentials['maxmind']['account'] ?? null;
+                $mmLicense = $this->credentials['maxmind']['license'] ?? null;
+                if ($mmAccount && $mmLicense) {
+                    $mindfraud = new MinFraud($mmAccount, $mmLicense);
+                    $response = $mindfraud->withDevice([
+                        'ip' => $ip,
+                    ])->score();
+
+                    $maxmind = $this->convert_array($response);
+
+                    if ($maxmind['ip_address']['risk']) {
+                        $result['trustable']['fraud_score'] = max($result['trustable']['fraud_score'], round($maxmind['ip_address']['risk']));
+                    }
+                }
+            } catch (Exception) {}
+        }
 
         $black = 0;
         $total = 0;
@@ -539,8 +529,29 @@ class IpFilterSdk
             return $result;
         }
 
+        return $result;
+    }
+
+    public function validate(string $ip, bool $fast = true, bool $score = false) {
+        if ($fast) {
+            // Cache for burst protection (fast repeated checks)
+            $cacheKey = 'ip_filter:' . md5(implode('|', [$ip, (int)$fast, (int)$score]));
+            if ($fast) {
+                try {
+                    $cached = Cache::get($cacheKey);
+                    if (is_array($cached)) {
+                        return $cached;
+                    }
+                } catch (Exception) {
+                    // Ignore cache errors
+                }
+            }
+        }
+
+        $result = $this->handle($ip, $fast, $bool);
+
         // Cache only final results
-        try { Cache::put($cacheKey, $result, 300); } catch (Exception) {}
+        try { Cache::put($cacheKey, $result, 3600); } catch (Exception) {}
 
         return $result;
     }
