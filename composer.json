@@ -1,5 +1,5 @@
 {
-    "name": "funnydevjsc/laravel-ip-address-filter",
+    "name": "funnydevjsc/laravel-ip-filter",
     "description": "Laravel package to filter bad ip address",
     "type": "library",
     "license": "MIT",
@@ -16,7 +16,7 @@
             "homepage": "https://github.com/funnydevjsc"
         }
     ],
-    "homepage": "https://github.com/funnydevjsc/laravel-ip-address-filter",
+    "homepage": "https://github.com/funnydevjsc/laravel-ip-filter",
     "keywords": ["Laravel", "ip", "filter"],
     "require": {
         "php": "^8.1|^8.2|^8.3|^8.4",
