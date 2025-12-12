@@ -39,10 +39,10 @@ composer require funnydevjsc/laravel-ip-filter
 #### Step 3. Publish the controller file and config file
 
 ```bash
-php artisan vendor:publish --provider="FunnyDev\IPFilter\IPFilterServiceProvider" --tag="ip-filter"
+php artisan vendor:publish --provider="FunnyDev\IpFilter\IpFilterServiceProvider" --tag="ip-filter"
 ```
 
-If publishing files fails, please create corresponding files at the path `config/ip-filter.php` and `app\Http\Controllers\IPFilterControllers.php` from this package. And you can also further customize the IPFilterControllers.php file to suit your project.
+If publishing files fails, please create corresponding files at the path `config/ip-filter.php` and `app\Http\Controllers\IpFilterControllers.php` from this package. And you can also further customize the IpFilterControllers.php file to suit your project.
 
 #### Step 4. Update the various config settings in the published config file:
 
@@ -57,7 +57,7 @@ After publishing the package assets a configuration file will be located at <cod
 
 namespace App\Console\Commands;
 
-use FunnyDev\IPFilter\IPFilterSdk;
+use FunnyDev\IpFilter\IpFilterSdk;
 use Illuminate\Console\Command;
 
 class IpFilterTestCommand extends Command
@@ -73,7 +73,7 @@ class IpFilterTestCommand extends Command
 
     public function handle()
     {
-        $instance = new IPFilterSdk();
+        $instance = new IpFilterSdk();
         
         // Perform checking with fast mode turned on and only use $result['recommended'] as signal (true/false)
         $result = $instance->validate(ip: '127.0.0.1', fast: true, score: false);
@@ -81,24 +81,39 @@ class IpFilterTestCommand extends Command
         // Perform a full checking
         $result = $instance->validate(ip: '127.0.0.1', fast: false, score: true);
         
-        // Explanation of results
+        // Explanation of results (structure returned by the SDK)
         $result = [
-            'query' => $ip,
-            'recommend' => true, // Recommended value of whether to accept this ip or not
-            'reason' => '', // Reason why the ip is not recommended
+            'query' => '127.0.0.1',
+            'recommend' => true, // Whether to accept this IP
+            'reason' => '', // Reason when not recommended
             'trustable' => [
-                'exist' => true, // Does the ip exist
-                'disposable' => false, // Is the ip spam
-                'blacklist' => 0, // Percentage of blacklists as a float
-                'fraud_score' => 0, // Fraud score on a 100-point scale
-                'suspicious' => false, // Is the ip suspicious of maliciousness
-                'high_risk' => false, // Is the ip considered high risk of payment
-                'domain_type' => 'popular',
-                'domain_trust' => true, // Is the domain name trustworthy?
-                'domain_age' => '',
-                'dns_valid' => false, // Does DNS match between domain name and SMTP server?
-                'username' => true // Is the ip address username trustworthy?
-            ]
+                'mobile' => false,
+                'proxy' => false,
+                'hosting' => false,
+                'botnet' => false,
+                'total_server' => 0, // Number of blacklist engines checked
+                'blacklist' => 0, // Percent of blacklists detected (0-100)
+                'fraud_score' => 0, // Fraud score (0-100)
+                'reputation' => 'Unknown',
+                'spam_ip' => false,
+            ],
+            'location' => [
+                'country' => 'Unknown',
+                'countryCode' => 'Unknown',
+                'region' => 'Unknown',
+                'regionName' => 'Unknown',
+                'city' => 'Unknown',
+                'zip' => 'Unknown',
+                'lat' => 'Unknown',
+                'lon' => 'Unknown',
+                'timezone' => 'Unknown',
+            ],
+            'dns' => [
+                'isp' => 'Unknown',
+                'org' => 'Unknown',
+                'as' => 'Unknown',
+                'asname' => 'Unknown',
+            ],
         ];
     }
 }

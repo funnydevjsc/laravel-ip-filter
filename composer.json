@@ -40,7 +40,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "IpFilterServiceProvider"
+        "FunnyDev\\IpFilter\\IpFilterServiceProvider"
       ]
     }
   },
