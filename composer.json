@@ -27,7 +27,7 @@
         "illuminate/http": "^8.83",
         "illuminate/routing": "^8.83",
         "illuminate/console": "^8.83",
-        "phpunit/phpunit": "^9.6"
+        "phpunit/phpunit": "^10.5"
   },
   "autoload-dev": {
     "psr-4": {
