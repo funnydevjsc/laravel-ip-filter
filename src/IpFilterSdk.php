@@ -548,7 +548,7 @@ class IpFilterSdk
             }
         }
 
-        $result = $this->handle($ip, $fast, $bool);
+        $result = $this->handle($ip, $fast, $score);
 
         // Cache only final results
         try { Cache::put($cacheKey, $result, 3600); } catch (Exception) {}
