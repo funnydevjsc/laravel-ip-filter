@@ -9,11 +9,8 @@ class IpFilterController
 {
     public function store(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email'
-        ]);
         $instance = new IpFilterSdk();
-        $result = $instance->validate(email: $request->input('email'), fast: false, score: true);
+        $result = $instance->validate(ip: $request->ip(), fast: false, score: true);
 
         /*
          * You could handle the response of validator here like:

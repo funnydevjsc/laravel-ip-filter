@@ -157,7 +157,8 @@ class IpFilterSdk
         $result = $this->init_result($ip);
 
         // Basic format validation first
-        if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        $is_ipv4 = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
+        if (!$is_ipv4 && !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
             $result['recommend'] = false;
             $result['reason'] = 'Invalid ip format';
             if ($fast) return $result;
@@ -171,7 +172,7 @@ class IpFilterSdk
             } else {
                 $url = 'http://ip-api.com/json/' . $ip . '?fields=status,message,continent,continentCode,country,countryCode,countryCode3,region,regionName,city,district,zip,lat,lon,timezone,offset,currentTime,currency,callingCode,isp,org,as,asname,reverse,mobile,proxy,hosting,query';
             }
-            $ip_api = $this->request('GET', $url, [], 'json', false, [], [], ['timeout' => $fast ? 3 : 10]);
+            $ip_api = $this->request('GET', $url, [], 'json', false, [], [], ['timeout' => 10]);
             if ($ip_api['status'] === 'success') {
                 $result['location']['country'] = $ip_api['country'];
                 $result['location']['countryCode'] = $ip_api['countryCode'];
@@ -336,7 +337,7 @@ class IpFilterSdk
 
         // Check blacklist from projecthoneypot
         try {
-            if (!empty($this->credentials['projecthoneypot']) && (strtolower($this->credentials['projecthoneypot']) !== 'off')) {
+            if ($is_ipv4 && !empty($this->credentials['projecthoneypot']) && (strtolower($this->credentials['projecthoneypot']) !== 'off')) {
                 $response = $this->request('GET', 'https://www.projecthoneypot.org/ip_' . $ip);
                 if (!str_contains($response, 't have data on this IP currently')) {
                     $black += 1;
